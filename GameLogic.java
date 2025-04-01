@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-
 public class GameLogic 
 {
     private List<String> playerHand;
@@ -38,23 +37,20 @@ public class GameLogic
     public void hit(String playerOrhouse)
     {   
         String card = drawCard();
+        int cardValue = deck.remove(card); //this will remove card from the deck
         
         if(playerOrhouse.equals("player"))
         {
+              // adds the value of the card to player score;
             playerHand.add(card);
-            
-            // adds the value of the card to player score;
-            int cardValue = deck.get(card);
-            playerScore += cardValue;
+            playerScore += Ace(playerScore, cardValue);
              
         }
         
         else if(playerOrhouse.equals("House"))
         {
             houseHand.add(card);
-            
-            int cardValue = deck.get(card);
-            houseScore += cardValue;
+            houseScore += Ace(houseScore, cardValue);
         }
     }
     
@@ -88,7 +84,6 @@ public class GameLogic
             System.out.println("Draw");
             return null;
         }
-        
         else
         {
             System.out.println("IDK");
@@ -97,8 +92,32 @@ public class GameLogic
         
     }
     
+    private int Ace(int currentScore, int cardValue) {
+        if (cardValue == 1 && currentScore + 11 <= 21) {
+            return 11; // this would count the ace as 11 if it doesnt cause a bust
+        }
+        return cardValue;
+    }
+    
+    
 
     private String drawCard() {
         return deck.keySet().iterator().next();
+    }
+    
+    public int getPlayerScore() {
+        return playerScore;
+    }
+    
+    public int getHouseScore() {
+        return houseScore;
+    }
+    
+    public List<String> getPlayerHand() {
+        return playerHand;
+    }
+    
+    public List<String> getHouseHand() {
+        return houseHand;
     }
 }

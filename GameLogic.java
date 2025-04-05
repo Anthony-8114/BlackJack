@@ -47,7 +47,7 @@ public class GameLogic
              
         }
         
-        else if(playerOrhouse.equals("House"))
+        else if(playerOrhouse.equals("house"))
         {
             houseHand.add(card);
             houseScore += Ace(houseScore, cardValue);

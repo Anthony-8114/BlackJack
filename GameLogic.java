@@ -67,30 +67,33 @@ public class GameLogic
     // using Boolean instead of boolean so i can return null incase of a draw.
     public Boolean bustCheck()
     {
-        if(playerScore > 21 || playerScore < houseScore)
+        if (houseScore > 21)
         {
-            System.out.println("You lose");
-            return false;
-        }
-        
-        else if(playerScore == 21 || playerScore > houseScore)
-        {
-            System.out.println("You win");
+            System.out.println("House busts! You win.");
             return true;
         }
-        
-        else if(playerScore == houseScore)
+        else if (playerScore > 21)
         {
-            System.out.println("Draw");
+            System.out.println("You bust! House wins.");
+            return false;
+        }
+        else if (playerScore > houseScore)
+        {
+            System.out.println("You win!");
+            return true;
+        }
+        else if (playerScore < houseScore)
+        {
+            System.out.println("You lose.");
+            return false;
+        }
+        else // playerScore == houseScore
+        {
+            System.out.println("It's a draw.");
             return null;
         }
-        else
-        {
-            System.out.println("IDK");
-            return null;
-        }
-        
     }
+
     
     private int Ace(int currentScore, int cardValue) {
         if (cardValue == 1 && currentScore + 11 <= 21) {

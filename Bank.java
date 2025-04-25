@@ -59,8 +59,6 @@ public class Bank
         {
             String line = reader.readLine();
 
-            System.out.println("Read from file: " + line);
-
             if (line != null && !line.trim().isEmpty()) 
             {   
                 

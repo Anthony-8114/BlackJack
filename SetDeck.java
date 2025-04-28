@@ -43,7 +43,7 @@ public class SetDeck
                 {
                     cardValue = 1;
                 }
-                else 
+                else
                 {
                     cardValue = 11;
                 }

@@ -74,6 +74,12 @@ public class BlackJack
                     game.hit("player");
                     hasPlayed = true;
                     System.out.println("Your hand: " + game.getPlayerHand() + " (Score: " + game.getPlayerScore() + ")");
+                    if (game.getPlayerScore() == 21)
+                    {
+                        System.out.println("You hit 21!");
+                        break;
+                    }
+                    
                     if (game.getPlayerScore() > 21)
                     {
                         System.out.println("Bust! You lose your bet.");
@@ -123,7 +129,7 @@ public class BlackJack
                 System.out.println("\n=== House Turn ===");
                 System.out.println("House reveals: " + game.getHouseHand() + " (Score: " + game.getHouseScore() + ")");
 
-                while (game.getHouseScore() <= 16)
+                while (game.getHouseScore() <= 16 && game.getPlayerScore() != 21)
                 {
                     game.hit("house");
                     System.out.println("House hits: " + game.getHouseHand().get(game.getHouseHand().size() - 1));
@@ -139,7 +145,6 @@ public class BlackJack
                 }
                 else if (result)
                 {
-                    System.out.println("You win!");
                     playerBank.increaseBalance(bet); // Full payout (doubled bet)
                 }
                 else

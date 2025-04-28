@@ -9,118 +9,105 @@ package com.mycompany.blackjack;
  * @author ay196
  */
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
-public class GameLogic 
+public class GameLogic
 {
-    private List<String> playerHand;
-    private int playerScore;
-    
-    private List<String> houseHand;
-    private int houseScore;
+    private HumanPlayer player;
+    private HousePlayer house;
     
     private HashMap<String, Integer> deck;
     
     public GameLogic(HashMap<String, Integer> shuffledDeck)
     {
         this.deck = shuffledDeck;
-        this.playerHand = new ArrayList<>();
-        this.houseHand = new ArrayList<>();
-        
-        this.playerScore = 0;
-        this.houseScore = 0;
+        this.player = new HumanPlayer();
+        this.house = new HousePlayer();
     }
     
-    
-    public void hit(String playerOrhouse)
-    {   
+    public void hit(String who)
+    {
         String card = drawCard();
-        int cardValue = deck.remove(card); //this will remove card from the deck
+        int cardValue = deck.remove(card);
         
-        if(playerOrhouse.equals("player"))
+        if (who.equals("player"))
         {
-              // adds the value of the card to player score;
-            playerHand.add(card);
-            playerScore += Ace(playerScore, cardValue);
-             
+            player.addCard(card, Ace(player.getScore(), cardValue));
         }
-        
-        else if(playerOrhouse.equals("house"))
+        else if (who.equals("house"))
         {
-            houseHand.add(card);
-            houseScore += Ace(houseScore, cardValue);
+            house.addCard(card, Ace(house.getScore(), cardValue));
         }
     }
     
     public void stand()
     {
-        
-        if(houseScore <= 16)
+        if (house.getScore() <= 16)
         {
             hit("house");
         }
-        
     }
     
-    // using Boolean instead of boolean so i can return null incase of a draw.
     public Boolean bustCheck()
     {
-        if (houseScore > 21)
+        if (house.getScore() > 21)
         {
             System.out.println("House busts! You win.");
             return true;
         }
-        else if (playerScore > 21)
+        else if (player.getScore() > 21)
         {
             System.out.println("You bust! House wins.");
             return false;
         }
-        else if (playerScore > houseScore)
+        else if (player.getScore() > house.getScore())
         {
             System.out.println("You win!");
             return true;
         }
-        else if (playerScore < houseScore)
+        else if (player.getScore() < house.getScore())
         {
             System.out.println("You lose.");
             return false;
         }
-        else // playerScore == houseScore
+        else
         {
             System.out.println("It's a draw.");
             return null;
         }
     }
-
     
-    private int Ace(int currentScore, int cardValue) {
-        if (cardValue == 1 && currentScore + 11 <= 21) {
-            return 11; // this would count the ace as 11 if it doesnt cause a bust
+    private int Ace(int currentScore, int cardValue)
+    {
+        if (cardValue == 1 && currentScore + 11 <= 21)
+        {
+            return 11;
         }
         return cardValue;
     }
     
-    
-
-    private String drawCard() {
+    private String drawCard()
+    {
         return deck.keySet().iterator().next();
     }
     
-    public int getPlayerScore() {
-        return playerScore;
+    public int getPlayerScore()
+    {
+        return player.getScore();
     }
     
-    public int getHouseScore() {
-        return houseScore;
+    public int getHouseScore()
+    {
+        return house.getScore();
     }
     
-    public List<String> getPlayerHand() {
-        return playerHand;
+    public java.util.List<String> getPlayerHand()
+    {
+        return player.getHand();
     }
     
-    public List<String> getHouseHand() {
-        return houseHand;
+    public java.util.List<String> getHouseHand()
+    {
+        return house.getHand();
     }
 }

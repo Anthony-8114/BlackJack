@@ -13,11 +13,15 @@ public class HousePlayer extends Player
 {
     public HousePlayer()
     {
-        super(); // calls Player constructor
+        super("House");
     }
     
+    
+    @Override
     public boolean shouldHit()
     {
-        return score <= 16;
+        //standard dealer rules for blackjack
+        // Uses getter instead of direct field access
+        return getScore() <= 16;
     }
 }

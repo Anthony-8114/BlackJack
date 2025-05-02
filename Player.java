@@ -12,30 +12,41 @@ package com.mycompany.blackjack;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Player
+public abstract class Player implements PlayerInterface
 {
     protected List<String> hand;
     protected int score;
+    protected String name;
     
-    public Player()
+    public Player(String name)
     {
-        hand = new ArrayList<>();
-        score = 0;
+        this.hand = new ArrayList<>();
+        this.score = 0;
+        this.name = name;
     }
     
-    public void addCard(String card, int value)
-    {
+    @Override
+    public void addCard(String card, int value) {
         hand.add(card);
         score += value;
     }
     
-    public int getScore()
-    {
+    @Override
+    public int getScore() {
         return score;
     }
     
-    public List<String> getHand()
-    {
+    @Override
+    public List<String> getHand() {
         return hand;
     }
+    
+    @Override
+    public String getName() {
+        return name;
+    }
+    
+    
+    @Override
+    public abstract boolean shouldHit();
 }

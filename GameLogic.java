@@ -10,15 +10,16 @@ package com.mycompany.blackjack;
  */
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class GameLogic
 {
-    private HumanPlayer player;
-    private HousePlayer house;
+    private final PlayerInterface player;
+    private final PlayerInterface house;
+    private final Map<String, Integer> deck;
     
-    private HashMap<String, Integer> deck;
-    
-    public GameLogic(HashMap<String, Integer> shuffledDeck)
+    public GameLogic(Map<String, Integer> shuffledDeck)
     {
         this.deck = shuffledDeck;
         this.player = new HumanPlayer();
@@ -30,19 +31,19 @@ public class GameLogic
         String card = drawCard();
         int cardValue = deck.remove(card);
         
-        if (who.equals("player"))
-        {
-            player.addCard(card, Ace(player.getScore(), cardValue));
-        }
-        else if (who.equals("house"))
-        {
-            house.addCard(card, Ace(house.getScore(), cardValue));
-        }
+        PlayerInterface target = who.equals("player") ? player : house;
+        target.addCard(card, calculateCardValue(target.getScore(), cardValue));
+    }
+    
+    
+    private int calculateCardValue(int currentScore, int cardValue) {
+        // method to handle ace as 11 if it wont bust
+        return (cardValue == 1 && currentScore + 11 <= 21) ? 11: cardValue;
     }
     
     public void stand()
     {
-        if (house.getScore() <= 16)
+        if (house.shouldHit())
         {
             hit("house");
         }
@@ -77,19 +78,12 @@ public class GameLogic
         }
     }
     
-    private int Ace(int currentScore, int cardValue)
-    {
-        if (cardValue == 1 && currentScore + 11 <= 21)
-        {
-            return 11;
-        }
-        return cardValue;
-    }
-    
     private String drawCard()
     {
         return deck.keySet().iterator().next();
     }
+    
+    
     
     public int getPlayerScore()
     {
@@ -101,13 +95,21 @@ public class GameLogic
         return house.getScore();
     }
     
-    public java.util.List<String> getPlayerHand()
+    public List<String> getPlayerHand()
     {
         return player.getHand();
     }
     
-    public java.util.List<String> getHouseHand()
+    public List<String> getHouseHand()
     {
         return house.getHand();
+    }
+    
+    public String getPlayerName() {
+        return player.getName();
+    }
+    
+    public String getHouseName() {
+        return house.getName();
     }
 }

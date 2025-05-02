@@ -6,11 +6,15 @@
 
 package com.mycompany.blackjack;
 
-public class HumanPlayer extends Player
-{
+public class HumanPlayer extends Player {
     public HumanPlayer()
     {
-        super(); // calls Player constructor
+        super("Player");
+    }
+    
+    @Override
+    public boolean shouldHit() {
+        return false;
     }
     
     // You can add more features for human players later (like betting strategies)

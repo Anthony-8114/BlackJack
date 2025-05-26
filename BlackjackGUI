@@ -1,0 +1,331 @@
+package com.mycompany.blackjack;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.net.URL;
+import javax.imageio.ImageIO;
+import java.util.ArrayList;
+import java.util.List;
+
+public class BlackjackGUI {
+    private JFrame frame;
+    private JPanel panel, cardPanel, houseCardPanel;
+    private JButton hitButton, standButton, doubleButton, newGameButton;
+    private JLabel playerScoreLabel, houseScoreLabel, resultLabel, balanceLabel;
+    private GameLogic game;
+    private Bank bank;
+    private int currentBet;
+    private List<JLabel> playerCardLabels = new ArrayList<>();
+    private List<JLabel> houseCardLabels = new ArrayList<>();
+    private ImageIcon cardBackImage;
+
+    public BlackjackGUI() {
+        // Initialize game and bank
+        HashMap<String, Integer> deck = SetDeck.createDeck();
+        game = new GameLogic(deck);
+        bank = new Bank();
+
+        // Load card back image
+        try {
+            URL backImageUrl = getClass().getResource("/cards/back.png");
+            if (backImageUrl == null) {
+                throw new Exception("Card back image not found");
+            }
+            Image backImage = ImageIO.read(backImageUrl);
+            backImage = backImage.getScaledInstance(80, 120, Image.SCALE_SMOOTH);
+            cardBackImage = new ImageIcon(backImage);
+        } catch (Exception e) {
+            System.out.println("Error loading card back image: " + e.getMessage());
+            cardBackImage = createDefaultCardImage();
+        }
+
+        // Set up the main window
+        frame = new JFrame("Blackjack");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 650);
+
+        // Main panel with BorderLayout and green felt background
+        panel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                g.setColor(new Color(0, 100, 0)); // Dark green felt color
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Top panel (game info)
+        JPanel topPanel = new JPanel(new GridLayout(1, 3));
+        topPanel.setOpaque(false);
+        balanceLabel = new JLabel("Balance: $" + bank.getBalance());
+        balanceLabel.setForeground(Color.WHITE);
+        balanceLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        balanceLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        playerScoreLabel = new JLabel("Your score: 0");
+        playerScoreLabel.setForeground(Color.WHITE);
+        playerScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        playerScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        houseScoreLabel = new JLabel("House score: 0");
+        houseScoreLabel.setForeground(Color.WHITE);
+        houseScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        houseScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        topPanel.add(houseScoreLabel);
+        topPanel.add(balanceLabel);
+        topPanel.add(playerScoreLabel);
+
+        // House card panel
+        houseCardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 0));
+        houseCardPanel.setOpaque(false);
+        houseCardPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.WHITE), "House Hand"));
+        ((javax.swing.border.TitledBorder)houseCardPanel.getBorder()).setTitleColor(Color.WHITE);
+
+        // Player card panel
+        cardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 0));
+        cardPanel.setOpaque(false);
+        cardPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.WHITE), "Your Hand"));
+        ((javax.swing.border.TitledBorder)cardPanel.getBorder()).setTitleColor(Color.WHITE);
+
+        // Result label
+        resultLabel = new JLabel("");
+        resultLabel.setForeground(Color.YELLOW);
+        resultLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+        // Button panel (actions)
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false);
+        hitButton = new JButton("Hit");
+        standButton = new JButton("Stand");
+        doubleButton = new JButton("Double Down");
+        newGameButton = new JButton("New Game");
+
+        // Style buttons
+        styleButton(hitButton);
+        styleButton(standButton);
+        styleButton(doubleButton);
+        styleButton(newGameButton);
+
+        buttonPanel.add(hitButton);
+        buttonPanel.add(standButton);
+        buttonPanel.add(doubleButton);
+        buttonPanel.add(newGameButton);
+
+        // Add panels to main panel
+        panel.add(topPanel, BorderLayout.NORTH);
+        panel.add(houseCardPanel, BorderLayout.CENTER);
+        panel.add(cardPanel, BorderLayout.SOUTH);
+        panel.add(resultLabel, BorderLayout.CENTER);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Add action listeners
+        setupButtonListeners();
+
+        // Start a new game
+        startNewGame();
+
+        // Display the window
+        frame.add(panel);
+        frame.setVisible(true);
+    }
+
+    private void styleButton(JButton button) {
+        button.setBackground(new Color(0, 70, 0));
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
+        button.setPreferredSize(new Dimension(120, 40));
+    }
+
+    private ImageIcon createDefaultCardImage() {
+        // Create a simple card image if the real one can't be loaded
+        Image image = new BufferedImage(80, 120, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = (Graphics2D) image.getGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, 80, 120);
+        g.setColor(Color.BLACK);
+        g.drawRect(0, 0, 79, 119);
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("?", 35, 60);
+        return new ImageIcon(image);
+    }
+
+    private ImageIcon getCardImage(String cardName) {
+        try {
+            // Extract suit and rank from card name
+            String[] parts = cardName.split(" ");
+            String rank = parts[0];
+            String suit = parts[2].toLowerCase();
+            
+            // Handle 10 card specially
+            if (rank.equals("10")) {
+                rank = "10";
+            } else {
+                rank = String.valueOf(rank.charAt(0));
+            }
+            
+            // Load the appropriate card image
+            URL imageUrl = getClass().getResource("src\\main\\java\\com\\mycompany\\blackjack\\cards\\" + rank + "_of_" + suit + ".png");
+            if (imageUrl == null) {
+                return createDefaultCardImage();
+            }
+            Image image = ImageIO.read(imageUrl);
+            image = image.getScaledInstance(80, 120, Image.SCALE_SMOOTH);
+            return new ImageIcon(image);
+        } catch (Exception e) {
+            System.out.println("Error loading card image: " + e.getMessage());
+            return createDefaultCardImage();
+        }
+    }
+
+    private void setupButtonListeners() {
+        hitButton.addActionListener(e -> {
+            game.hit("player");
+            updateGameState();
+            if (game.getPlayerScore() >= 21) {
+                endPlayerTurn();
+            }
+        });
+
+        standButton.addActionListener(e -> endPlayerTurn());
+
+        doubleButton.addActionListener(e -> {
+            if (bank.getBalance() >= currentBet) {
+                currentBet *= 2;
+                game.hit("player");
+                updateGameState();
+                endPlayerTurn();
+            } else {
+                JOptionPane.showMessageDialog(frame, "Not enough balance to double!");
+            }
+        });
+
+        newGameButton.addActionListener(e -> startNewGame());
+    }
+
+    private void startNewGame() {
+        // Clear card panels
+        houseCardPanel.removeAll();
+        cardPanel.removeAll();
+        playerCardLabels.clear();
+        houseCardLabels.clear();
+        
+        // Reset game
+        HashMap<String, Integer> deck = SetDeck.createDeck();
+        game = new GameLogic(deck);
+        
+        // Ask for bet
+        String betInput = JOptionPane.showInputDialog(frame, "Enter your bet:", "New Game", JOptionPane.PLAIN_MESSAGE);
+        try {
+            currentBet = Integer.parseInt(betInput);
+            if (currentBet <= 0 || currentBet > bank.getBalance()) {
+                JOptionPane.showMessageDialog(frame, "Invalid bet amount!");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
+            return;
+        }
+
+        // Deal initial cards
+        game.hit("player");
+        game.hit("house");
+        game.hit("player");
+        game.hit("house");
+
+        updateGameState();
+        resultLabel.setText("");
+        
+        // Repaint the UI
+        houseCardPanel.revalidate();
+        houseCardPanel.repaint();
+        cardPanel.revalidate();
+        cardPanel.repaint();
+    }
+
+    private void updateGameState() {
+        // Update player cards
+        cardPanel.removeAll();
+        playerCardLabels.clear();
+        for (String card : game.getPlayerHand()) {
+            JLabel cardLabel = new JLabel(getCardImage(card));
+            playerCardLabels.add(cardLabel);
+            cardPanel.add(cardLabel);
+        }
+        
+        // Update house cards - show first card and back for others
+        houseCardPanel.removeAll();
+        houseCardLabels.clear();
+        List<String> houseHand = game.getHouseHand();
+        if (!houseHand.isEmpty()) {
+            // Show first card
+            JLabel firstCard = new JLabel(getCardImage(houseHand.get(0)));
+            houseCardLabels.add(firstCard);
+            houseCardPanel.add(firstCard);
+            
+            // Show card backs for other cards
+            for (int i = 1; i < houseHand.size(); i++) {
+                JLabel cardLabel = new JLabel(cardBackImage);
+                houseCardLabels.add(cardLabel);
+                houseCardPanel.add(cardLabel);
+            }
+        }
+        
+        playerScoreLabel.setText("Your score: " + game.getPlayerScore());
+        houseScoreLabel.setText("House score: ?");
+        balanceLabel.setText("Balance: $" + bank.getBalance());
+        
+        cardPanel.revalidate();
+        cardPanel.repaint();
+        houseCardPanel.revalidate();
+        houseCardPanel.repaint();
+    }
+
+    private void endPlayerTurn() {
+        // House plays
+        while (game.getHouseScore() <= 16 && game.getPlayerScore() <= 21) {
+            game.hit("house");
+        }
+
+        // Update house info with all cards revealed
+        houseCardPanel.removeAll();
+        houseCardLabels.clear();
+        for (String card : game.getHouseHand()) {
+            JLabel cardLabel = new JLabel(getCardImage(card));
+            houseCardLabels.add(cardLabel);
+            houseCardPanel.add(cardLabel);
+        }
+        
+        houseScoreLabel.setText("House score: " + game.getHouseScore());
+
+        // Determine result
+        Boolean result = game.bustCheck();
+        if (result == null) {
+            resultLabel.setText("It's a draw!");
+        } else if (result) {
+            resultLabel.setText("You win!");
+            bank.increaseBalance(currentBet);
+        } else {
+            resultLabel.setText("You lose!");
+            bank.deductBalance(currentBet);
+        }
+
+        // Update balance
+        balanceLabel.setText("Balance: $" + bank.getBalance());
+        
+        houseCardPanel.revalidate();
+        houseCardPanel.repaint();
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new BlackjackGUI());
+    }
+}

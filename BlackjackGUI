@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.HashMap;
 import java.net.URL;
 import javax.imageio.ImageIO;
@@ -29,15 +30,21 @@ public class BlackjackGUI {
         game = new GameLogic(deck);
         bank = new Bank();
 
+
         // Load card back image
         try {
-            URL backImageUrl = getClass().getResource("/cards/back.png");
-            if (backImageUrl == null) {
-                throw new Exception("Card back image not found");
+            String backImagePath = "src/main/java/com/mycompany/blackjack/cards/back.png";
+            File backImageFile = new File(backImagePath);
+            System.out.println("Back image absolute path: " + backImageFile.getAbsolutePath());
+
+            if (!backImageFile.exists()) {
+                throw new Exception("Card back image not found at: " + backImageFile.getAbsolutePath());
             }
-            Image backImage = ImageIO.read(backImageUrl);
+
+            Image backImage = ImageIO.read(backImageFile);
             backImage = backImage.getScaledInstance(80, 120, Image.SCALE_SMOOTH);
             cardBackImage = new ImageIcon(backImage);
+            System.out.println("Successfully loaded back.png");
         } catch (Exception e) {
             System.out.println("Error loading card back image: " + e.getMessage());
             cardBackImage = createDefaultCardImage();
@@ -81,25 +88,21 @@ public class BlackjackGUI {
         topPanel.add(balanceLabel);
         topPanel.add(playerScoreLabel);
 
-        // House card panel
         houseCardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 0));
         houseCardPanel.setOpaque(false);
         houseCardPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.WHITE), "House Hand"));
         ((javax.swing.border.TitledBorder)houseCardPanel.getBorder()).setTitleColor(Color.WHITE);
 
-        // Player card panel
         cardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 0));
         cardPanel.setOpaque(false);
         cardPanel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.WHITE), "Your Hand"));
         ((javax.swing.border.TitledBorder)cardPanel.getBorder()).setTitleColor(Color.WHITE);
 
-        // Result label
         resultLabel = new JLabel("");
         resultLabel.setForeground(Color.YELLOW);
         resultLabel.setFont(new Font("Arial", Font.BOLD, 20));
         resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // Button panel (actions)
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         hitButton = new JButton("Hit");
@@ -107,7 +110,6 @@ public class BlackjackGUI {
         doubleButton = new JButton("Double Down");
         newGameButton = new JButton("New Game");
 
-        // Style buttons
         styleButton(hitButton);
         styleButton(standButton);
         styleButton(doubleButton);
@@ -118,23 +120,35 @@ public class BlackjackGUI {
         buttonPanel.add(doubleButton);
         buttonPanel.add(newGameButton);
 
-        // Add panels to main panel
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(houseCardPanel, BorderLayout.CENTER);
         panel.add(cardPanel, BorderLayout.SOUTH);
-        panel.add(resultLabel, BorderLayout.CENTER);
-        panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+        centerPanel.add(houseCardPanel, BorderLayout.CENTER);
+        centerPanel.add(resultLabel, BorderLayout.SOUTH);
+        panel.add(centerPanel, BorderLayout.CENTER);
+        panel.add(cardPanel, BorderLayout.SOUTH);
+        panel.add(buttonPanel, BorderLayout.PAGE_END);
+        
+        cardPanel.setPreferredSize(new Dimension(800, 180));
+        houseCardPanel.setPreferredSize(new Dimension(800, 180));
 
-        // Add action listeners
+
         setupButtonListeners();
 
-        // Start a new game
         startNewGame();
 
-        // Display the window
         frame.add(panel);
         frame.setVisible(true);
     }
+    
+    private void testCardImage(String cardName) {
+            System.out.println("Testing: " + cardName);
+            ImageIcon icon = getCardImage(cardName);
+            System.out.println("Loaded: " + (icon != null ? "Success" : "Failed"));
+        }
 
     private void styleButton(JButton button) {
         button.setBackground(new Color(0, 70, 0));
@@ -160,30 +174,23 @@ public class BlackjackGUI {
 
     private ImageIcon getCardImage(String cardName) {
         try {
-            // Extract suit and rank from card name
-            String[] parts = cardName.split(" ");
-            String rank = parts[0];
-            String suit = parts[2].toLowerCase();
-            
-            // Handle 10 card specially
-            if (rank.equals("10")) {
-                rank = "10";
-            } else {
-                rank = String.valueOf(rank.charAt(0));
-            }
-            
-            // Load the appropriate card image
-            URL imageUrl = getClass().getResource("src\\main\\java\\com\\mycompany\\blackjack\\cards\\" + rank + "_of_" + suit + ".png");
-            if (imageUrl == null) {
-                return createDefaultCardImage();
-            }
-            Image image = ImageIO.read(imageUrl);
-            image = image.getScaledInstance(80, 120, Image.SCALE_SMOOTH);
-            return new ImageIcon(image);
-        } catch (Exception e) {
-            System.out.println("Error loading card image: " + e.getMessage());
-            return createDefaultCardImage();
-        }
+        String[] parts = cardName.split(" ");
+        String rank = parts[0].toLowerCase();
+        String suit = parts[2].toLowerCase();
+
+        if (rank.equals("a")) rank = "ace";
+
+        String imagePath = "src/main/java/com/mycompany/blackjack/cards/" + 
+                         rank + "_of_" + suit + ".png";
+        
+        Image image = ImageIO.read(new File(imagePath));
+        if (image == null) throw new Exception("Image read failed");
+        
+        return new ImageIcon(image.getScaledInstance(80, 120, Image.SCALE_SMOOTH));
+    } catch (Exception e) {
+        System.out.println("Error loading " + cardName + ": " + e.getMessage());
+        return createDefaultCardImage();
+    }
     }
 
     private void setupButtonListeners() {
@@ -212,17 +219,14 @@ public class BlackjackGUI {
     }
 
     private void startNewGame() {
-        // Clear card panels
         houseCardPanel.removeAll();
         cardPanel.removeAll();
         playerCardLabels.clear();
         houseCardLabels.clear();
         
-        // Reset game
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
         
-        // Ask for bet
         String betInput = JOptionPane.showInputDialog(frame, "Enter your bet:", "New Game", JOptionPane.PLAIN_MESSAGE);
         try {
             currentBet = Integer.parseInt(betInput);
@@ -252,42 +256,58 @@ public class BlackjackGUI {
     }
 
     private void updateGameState() {
-        // Update player cards
-        cardPanel.removeAll();
-        playerCardLabels.clear();
-        for (String card : game.getPlayerHand()) {
-            JLabel cardLabel = new JLabel(getCardImage(card));
-            playerCardLabels.add(cardLabel);
-            cardPanel.add(cardLabel);
-        }
-        
-        // Update house cards - show first card and back for others
-        houseCardPanel.removeAll();
-        houseCardLabels.clear();
-        List<String> houseHand = game.getHouseHand();
-        if (!houseHand.isEmpty()) {
-            // Show first card
-            JLabel firstCard = new JLabel(getCardImage(houseHand.get(0)));
-            houseCardLabels.add(firstCard);
-            houseCardPanel.add(firstCard);
-            
-            // Show card backs for other cards
-            for (int i = 1; i < houseHand.size(); i++) {
-                JLabel cardLabel = new JLabel(cardBackImage);
-                houseCardLabels.add(cardLabel);
-                houseCardPanel.add(cardLabel);
+    // Update player cards
+    cardPanel.removeAll();
+    playerCardLabels.clear();
+    for (String card : game.getPlayerHand()) {
+        JLabel cardLabel = new JLabel(getCardImage(card)) {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(80, 120);
             }
-        }
-        
-        playerScoreLabel.setText("Your score: " + game.getPlayerScore());
-        houseScoreLabel.setText("House score: ?");
-        balanceLabel.setText("Balance: $" + bank.getBalance());
-        
-        cardPanel.revalidate();
-        cardPanel.repaint();
-        houseCardPanel.revalidate();
-        houseCardPanel.repaint();
+        };
+        cardLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        playerCardLabels.add(cardLabel);
+        cardPanel.add(cardLabel);
     }
+    
+    // Update house cards
+    houseCardPanel.removeAll();
+    houseCardLabels.clear();
+    List<String> houseHand = game.getHouseHand();
+    if (!houseHand.isEmpty()) {
+        JLabel firstCard = new JLabel(getCardImage(houseHand.get(0))) {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(80, 120);
+            }
+        };
+        houseCardLabels.add(firstCard);
+        houseCardPanel.add(firstCard);
+        
+        for (int i = 1; i < houseHand.size(); i++) {
+            JLabel cardLabel = new JLabel(cardBackImage) {
+                @Override
+                public Dimension getPreferredSize() {
+                    return new Dimension(80, 120);
+                }
+            };
+            houseCardLabels.add(cardLabel);
+            houseCardPanel.add(cardLabel);
+        }
+    }
+    
+    playerScoreLabel.setText("Your score: " + game.getPlayerScore());
+    houseScoreLabel.setText(houseHand.size() > 1 ? 
+                          "House score: ?" : 
+                          "House score: " + game.getHouseScore());
+    balanceLabel.setText("Balance: $" + bank.getBalance());
+    
+    cardPanel.revalidate();
+    cardPanel.repaint();
+    houseCardPanel.revalidate();
+    houseCardPanel.repaint();
+}
 
     private void endPlayerTurn() {
         // House plays

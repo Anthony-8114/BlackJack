@@ -21,7 +21,7 @@ public class BlackjackGUI
 
     public BlackjackGUI() 
     {
-        // Lodas the main game / creates the deck
+        // Load the main game / creates the deck
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
         bank = new Bank();
@@ -97,13 +97,20 @@ public class BlackjackGUI
         ((javax.swing.border.TitledBorder)cardPanel.getBorder()).setTitleColor(Color.WHITE);
         cardPanel.setPreferredSize(new Dimension(800, 180));
 
-        // Result
+        // Result label with improved styling
         resultLabel = new JLabel("");
         resultLabel.setForeground(Color.YELLOW);
-        resultLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        resultLabel.setFont(new Font("Arial", Font.BOLD, 36));
         resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        resultLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        // Button
+        // Create a centered panel for the result
+        JPanel resultPanel = new JPanel(new GridBagLayout());
+        resultPanel.setOpaque(false);
+        resultPanel.add(resultLabel);
+        resultPanel.setBounds(200, 200, 400, 100);
+
+        // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         hitButton = new JButton("Hit");
@@ -122,19 +129,17 @@ public class BlackjackGUI
         buttonPanel.add(doubleButton);
         buttonPanel.add(newGameButton);
 
-        // House cards and result
+        // Main layered pane layout
         JLayeredPane layeredPane = new JLayeredPane();
-        layeredPane.setPreferredSize(new Dimension(800, 250));
+        layeredPane.setPreferredSize(new Dimension(800, 400));
         
         JPanel housePanelWrapper = new JPanel(new BorderLayout());
         housePanelWrapper.setOpaque(false);
         housePanelWrapper.add(houseCardPanel, BorderLayout.CENTER);
         housePanelWrapper.setBounds(0, 0, 800, 200);
         
-        resultLabel.setBounds(300, 80, 200, 40);
-        
         layeredPane.add(housePanelWrapper, JLayeredPane.DEFAULT_LAYER);
-        layeredPane.add(resultLabel, JLayeredPane.PALETTE_LAYER);
+        layeredPane.add(resultPanel, JLayeredPane.PALETTE_LAYER);
 
         // Main layout
         panel.add(topPanel, BorderLayout.NORTH);
@@ -147,9 +152,7 @@ public class BlackjackGUI
         panel.add(bottomPanel, BorderLayout.SOUTH);
 
         setupButtonListeners();
-
-        startNewGame();
-
+        initializeGame();
         frame.add(panel);
         frame.setVisible(true);
     }
@@ -222,7 +225,6 @@ public class BlackjackGUI
                 updateGameState();
                 endPlayerTurn();
             } 
-            
             else 
             {
                 JOptionPane.showMessageDialog(frame, "Not enough balance to double!");
@@ -231,29 +233,72 @@ public class BlackjackGUI
 
         newGameButton.addActionListener(e -> startNewGame());
     }
+    
+    private void initializeGame() {
+        if (bank.getBalance() <= 0) {
+            handleInitialDeposit();
+        }
 
-    private void startNewGame() 
-    {
+        if (bank.getBalance() > 0) {
+            startNewGame();
+        } else {
+            JOptionPane.showMessageDialog(frame, "No initial deposit. Game exiting.");
+            frame.dispose();
+        }
+    }
+    
+    private void handleInitialDeposit() {
+        String depositInput = JOptionPane.showInputDialog(frame, 
+            "Your balance is $0. Enter deposit amount:", 
+            "Initial Deposit", 
+            JOptionPane.PLAIN_MESSAGE);
+
+        try {
+            int depositAmount = Integer.parseInt(depositInput);
+            if (depositAmount <= 0) {
+                JOptionPane.showMessageDialog(frame, "Deposit must be positive.");
+            } else {
+                bank.increaseBalance(depositAmount);
+                balanceLabel.setText("Balance: $" + bank.getBalance());
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(frame, "Invalid deposit amount.");
+        }
+    }
+    
+    private boolean startNewGame() {
         houseCardPanel.removeAll();
         cardPanel.removeAll();
-        
+        resultLabel.setText("");
+
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
-        
-        String betInput = JOptionPane.showInputDialog(frame, "Enter your bet:", "New Game", JOptionPane.PLAIN_MESSAGE);
-        try 
-        {
-            currentBet = Integer.parseInt(betInput);
-            if (currentBet <= 0 || currentBet > bank.getBalance()) 
-            {
-                JOptionPane.showMessageDialog(frame, "Invalid bet amount!");
-                return;
+
+        while (true) {
+            String betInput = JOptionPane.showInputDialog(frame, 
+                "Balance: $" + bank.getBalance() + "\nEnter your bet:", 
+                "New Game", 
+                JOptionPane.PLAIN_MESSAGE);
+
+            if (betInput == null) {
+                System.exit(0);
+                return false;
             }
-        } 
-        catch (NumberFormatException e)
-        {
-            JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
-            return;
+
+            try {
+                currentBet = Integer.parseInt(betInput);
+                if (currentBet <= 0) {
+                    JOptionPane.showMessageDialog(frame, "Bet must be positive!");
+                    continue;
+                }
+                if (currentBet > bank.getBalance()) {
+                    JOptionPane.showMessageDialog(frame, "You don't have enough money!");
+                    continue;
+                }
+                break;
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
+            }
         }
 
         game.hit("player");
@@ -262,7 +307,7 @@ public class BlackjackGUI
         game.hit("house");
 
         updateGameState();
-        resultLabel.setText("");
+        return true;
     }
 
     private void updateGameState() 
@@ -306,36 +351,27 @@ public class BlackjackGUI
         cardPanel.repaint();
     }
 
-    private void endPlayerTurn() 
-    {
-        while (game.getHouseScore() <= 16 && game.getPlayerScore() <= 21) 
-        {
+    private void endPlayerTurn() {
+        while (game.getHouseScore() <= 16 && game.getPlayerScore() <= 21) {
             game.hit("house");
         }
 
         houseCardPanel.removeAll();
-        for (String card : game.getHouseHand()) 
-        {
-            houseCardPanel.add(new JLabel(getCardImage(card)) 
-            {
+        for (String card : game.getHouseHand()) {
+            houseCardPanel.add(new JLabel(getCardImage(card)) {
                 @Override public Dimension getPreferredSize() { return new Dimension(80, 120); }
             });
         }
-        
+
         houseScoreLabel.setText("House score: " + game.getHouseScore());
 
         Boolean result = game.bustCheck();
-        if (result == null) 
-        {
+        if (result == null) {
             resultLabel.setText("It's a draw!");
-        } 
-        else if (result) 
-        {
+        } else if (result) {
             resultLabel.setText("You win!");
             bank.increaseBalance(currentBet);
-        } 
-        else
-        {
+        } else {
             resultLabel.setText("You lose!");
             bank.deductBalance(currentBet);
         }
@@ -343,6 +379,28 @@ public class BlackjackGUI
         balanceLabel.setText("Balance: $" + bank.getBalance());
         houseCardPanel.revalidate();
         houseCardPanel.repaint();
+
+        if (bank.getBalance() > 0) {
+            Timer timer = new Timer(2000, e -> startNewGame());
+            timer.setRepeats(false);
+            timer.start();
+        } else {
+            int choice = JOptionPane.showConfirmDialog(frame, 
+                "Game over! Deposit more money?", 
+                "Out of Money", 
+                JOptionPane.YES_NO_OPTION);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                handleInitialDeposit();
+                if (bank.getBalance() > 0) {
+                    startNewGame();
+                } else {
+                    frame.dispose();
+                }
+            } else {
+                frame.dispose();
+            }
+        }
     }
 
     public static void main(String[] args) 

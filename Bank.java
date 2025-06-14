@@ -1,135 +1,95 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mycompany.blackjack;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.sql.*;
 
-
-/**
- *
- * @author ay196
- */
-public class Bank 
-{
+public class Bank {
     private int balance;
-    
-    private static final String FILE_PATH = "src\\main\\java\\com\\mycompany\\blackjack\\resources/balance.txt";
-    
-    public Bank() 
-    {
+    private static final String DB_PATH = "derby-dbs/BlackjackDB";
+    private static final String JDBC_URL = "jdbc:derby:" + DB_PATH + ";create=true";
+
+    static {
+        try {
+            DriverManager.registerDriver(new org.apache.derby.jdbc.EmbeddedDriver());
+        } catch (SQLException e) {
+            System.err.println("Failed to register Derby driver:");
+            e.printStackTrace();
+        }
+    }
+
+    public Bank() {
+        initializeDatabase();
         this.balance = readBalance();
     }
-    
-    private int readBalance()
-    {   
-        File file = new File(FILE_PATH);
-        
-        if (!file.exists()) 
-        {
-            try 
-            {
-                if (file.getParentFile() != null) {
-                    file.getParentFile().mkdirs();
+
+    private void initializeDatabase() {
+        try (Connection conn = DriverManager.getConnection(JDBC_URL)) {
+            createBankTableIfNotExists(conn);
+        } catch (SQLException e) {
+            System.err.println("ERROR: Database initialization failed");
+            e.printStackTrace();
+        }
+    }
+
+    private void createBankTableIfNotExists(Connection conn) throws SQLException {
+        DatabaseMetaData dbMeta = conn.getMetaData();
+        try (ResultSet tables = dbMeta.getTables(null, null, "BANK_DATA", null)) {
+            if (!tables.next()) {
+                String createTableSQL = "CREATE TABLE BANK_DATA ("
+                        + "ID INT PRIMARY KEY, "
+                        + "BALANCE INT DEFAULT 100)";
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute(createTableSQL);
+                    
+                    String insertSQL = "INSERT INTO BANK_DATA (ID, BALANCE) VALUES (1, 100)";
+                    stmt.executeUpdate(insertSQL);
                 }
-                
-                file.createNewFile();
-                
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) 
-                {
-                    writer.write("100");
-                }
-                
-            } 
-            catch (IOException e) 
-            {
-                System.out.println("Error creating file: " + e.getMessage());
             }
+        }
+    }
+
+    private int readBalance() {
+        try (Connection conn = DriverManager.getConnection(JDBC_URL);
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT BALANCE FROM BANK_DATA WHERE ID=1")) {
             
-        }
-
-        // Read from the file
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) 
-        {
-            String line = reader.readLine();
-
-            if (line != null && !line.trim().isEmpty()) 
-            {   
-                
-                balance = Integer.parseInt(line.trim());
-                return Integer.parseInt(line.trim());
+            if (rs.next()) {
+                return rs.getInt("BALANCE");
             }
-        } 
-        catch (IOException | NumberFormatException e) 
-        {
-            System.out.println("Error reading file: " + e.getMessage());
+        } catch (SQLException e) {
+            System.err.println("ERROR: Failed to read balance");
+            e.printStackTrace();
         }
+        return 100;
+    }
 
-        return 0;
+    public int getBalance() {
+        return readBalance();
     }
-        
-    
-    public int getBalance()
-    {
-        File file = new File(FILE_PATH);
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) 
-        {
-            String line = reader.readLine();
-            if (line != null && !line.trim().isEmpty()) 
-            {
-                return Integer.parseInt(line.trim());
-            }
-        }
-        
-        catch (IOException | NumberFormatException e) 
-        {
-            System.out.println("Error reading balance: " + e.getMessage());
-        }
-        
-        return 0;
-        
-    }
-    
-    // deducts the amount bet if player loses
-    public void deductBalance(int betSize)
-    {   
-        // ensures that player's balance cant go under 0
-        // there is also another check in the main file that players cant bet if balance is 0
-        if(getBalance() > 0)
-        {
-            updateBalance(this.balance -= betSize);
-        }
-        
-    }
-    
-    // increase the balance if player wins
-    public void increaseBalance(int betSize)
-    {   
-        updateBalance(this.balance += betSize);
-        
-    }
-    
-    private void updateBalance(int newBalance) 
-    {
-        File file = new File(FILE_PATH);
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, false)))
-        {
-            writer.write(String.valueOf(newBalance));
-        } 
-        catch (IOException e) 
-        {
-            System.out.println("Error updating balance: " + e.getMessage());
+    public void deductBalance(int betSize) {
+        int currentBalance = getBalance();
+        if (currentBalance > 0) {
+            updateBalance(currentBalance - betSize);
         }
     }
 
-    
-    
+    public void increaseBalance(int betSize) {
+        updateBalance(getBalance() + betSize);
+    }
+
+    private void updateBalance(int newBalance) {
+        try (Connection conn = DriverManager.getConnection(JDBC_URL);
+             PreparedStatement pstmt = conn.prepareStatement(
+                     "UPDATE BANK_DATA SET BALANCE=? WHERE ID=1")) {
+            
+            pstmt.setInt(1, newBalance);
+            pstmt.executeUpdate();
+            this.balance = newBalance;
+        } catch (SQLException e) {
+            System.err.println("ERROR: Failed to update balance");
+            e.printStackTrace();
+        }
+    }
+
+
 }

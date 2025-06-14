@@ -15,6 +15,7 @@ public class BlackjackGUI
     private JButton hitButton, standButton, doubleButton, newGameButton;
     private JLabel playerScoreLabel, houseScoreLabel, resultLabel, balanceLabel;
     private GameLogic game;
+    private GameStats gameStats;
     private Bank bank;
     private int currentBet;
     private ImageIcon cardBackImage;
@@ -25,6 +26,9 @@ public class BlackjackGUI
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
         bank = new Bank();
+        gameStats = new GameStats();  // initialize your stats tracker
+
+        
 
         // Load the back image for the cards
         try 
@@ -368,12 +372,16 @@ public class BlackjackGUI
         Boolean result = game.bustCheck();
         if (result == null) {
             resultLabel.setText("It's a draw!");
+            gameStats.recordDraw();
+            
         } else if (result) {
             resultLabel.setText("You win!");
             bank.increaseBalance(currentBet);
+            gameStats.recordWin();
         } else {
             resultLabel.setText("You lose!");
             bank.deductBalance(currentBet);
+            gameStats.recordLoss();
         }
 
         balanceLabel.setText("Balance: $" + bank.getBalance());
@@ -381,7 +389,7 @@ public class BlackjackGUI
         houseCardPanel.repaint();
 
         if (bank.getBalance() > 0) {
-            Timer timer = new Timer(2000, e -> startNewGame());
+            Timer timer = new Timer(1000, e -> startNewGame());
             timer.setRepeats(false);
             timer.start();
         } else {

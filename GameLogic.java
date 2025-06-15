@@ -10,6 +10,7 @@ package com.mycompany.blackjack;
  */
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,38 +18,50 @@ public class GameLogic
 {
     private final PlayerInterface player;
     private final PlayerInterface house;
-    private final Map<String, Integer> deck;
+    private final Map<String, Integer> deck; // current deck
+    private final Map<String, Integer> allCardValues; // all possible card values
     
-    public GameLogic(Map<String, Integer> shuffledDeck)
-    {
-        this.deck = shuffledDeck;
+    public GameLogic(Map<String, Integer> shuffledDeck) {
+        this.deck = new LinkedHashMap<>(shuffledDeck);
+        this.allCardValues = new HashMap<>(shuffledDeck);
         this.player = new HumanPlayer();
         this.house = new HousePlayer();
     }
     
-    public void hit(String who)
-    {
+    public void hit(String who) {
         String card = drawCard();
+        // Remove from playable deck
         int cardValue = deck.remove(card);
         
         PlayerInterface target = who.equals("player") ? player : house;
-        target.addCard(card, calculateCardValue(target.getScore(), cardValue));
+        target.addCard(card, calculateCardValue(target, card, cardValue));
     }
     
     
-    private int calculateCardValue(int currentScore, int cardValue) {
-        // method to handle ace as 11 if it wont bust
-        return (cardValue == 1 && currentScore + 11 <= 21) ? 11: cardValue;
+    private int calculateCardValue(PlayerInterface target, String newCard, int cardValue) {
+        if (cardValue == 1) { // For Ace
+            List<String> hand = target.getHand();
+            if (!hand.isEmpty()) {
+                String previousCard = hand.get(hand.size() - 1);
+                int previousValue = allCardValues.get(previousCard); // Use preserved values
+                if (previousValue == 10) {
+                    return 11;
+                }
+            }
+            return 1;
+        }
+        return cardValue;
     }
     
-    public void stand()
-    {
-        if (house.shouldHit())
-        {
+    // checks if house should hit, if house value is 16 or under it will hit
+    public void stand() {
+        while (house.shouldHit()) {
             hit("house");
         }
+        bustCheck();
     }
     
+    // checks who won
     public Boolean bustCheck()
     {
         if (house.getScore() > 21)
@@ -78,13 +91,14 @@ public class GameLogic
         }
     }
     
+    // draws card from deck
     private String drawCard()
     {
         return deck.keySet().iterator().next();
     }
     
     
-    
+    // getters
     public int getPlayerScore()
     {
         return player.getScore();

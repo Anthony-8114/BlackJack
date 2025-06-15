@@ -14,7 +14,7 @@ public class BlackjackGUI
 {
     private JFrame frame;
     private JPanel panel, cardPanel, houseCardPanel;
-    private JButton hitButton, standButton, doubleButton, newGameButton;
+    private JButton hitButton, standButton, doubleButton, newGameButton, statsButton;
     private JLabel playerScoreLabel, houseScoreLabel, resultLabel, balanceLabel;
     private GameLogic game;
     private GameStats gameStats;
@@ -38,11 +38,11 @@ public class BlackjackGUI
     {
         
         
-        // Load the main game / creates the deck
+        // Load the main game / creates the deck / loads game stats tracker
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
         bank = new Bank();
-        gameStats = new GameStats();  // initialize your stats tracker
+        gameStats = new GameStats();
 
         
 
@@ -137,17 +137,20 @@ public class BlackjackGUI
         standButton = new JButton("Stand");
         doubleButton = new JButton("Double Down");
         newGameButton = new JButton("New Game");
+        statsButton = new JButton("Stats");
 
         // Style buttons
         styleButton(hitButton);
         styleButton(standButton);
         styleButton(doubleButton);
         styleButton(newGameButton);
+        styleButton(statsButton);
 
         buttonPanel.add(hitButton);
         buttonPanel.add(standButton);
         buttonPanel.add(doubleButton);
         buttonPanel.add(newGameButton);
+        buttonPanel.add(statsButton);
 
         // Main layered pane layout
         JLayeredPane layeredPane = new JLayeredPane();
@@ -186,7 +189,7 @@ public class BlackjackGUI
         button.setBorder(BorderFactory.createLineBorder(Color.WHITE, 2));
         button.setPreferredSize(new Dimension(120, 40));
     }
-
+    
     private ImageIcon createDefaultCardImage()
     {
         BufferedImage image = new BufferedImage(80, 120, BufferedImage.TYPE_INT_RGB);
@@ -199,7 +202,8 @@ public class BlackjackGUI
         g.drawString("?", 35, 60);
         return new ImageIcon(image);
     }
-
+    
+    // grabs the image from the cards folder
     private ImageIcon getCardImage(String cardName)
     {
         try 
@@ -221,9 +225,13 @@ public class BlackjackGUI
             return createDefaultCardImage();
         }
     }
-
+    
+    // sets up the button listeners 
+    // too know when a button is clicked
     private void setupButtonListeners() 
-    {
+    {   
+        statsButton.addActionListener(e -> showStats());
+        
         hitButton.addActionListener(e -> 
         {
             game.hit("player");
@@ -267,7 +275,10 @@ public class BlackjackGUI
         }
     }
     
+    // runs when user's balance is 0
     private void handleInitialDeposit() {
+        
+        // asks user for a deposit and credits it to the game
         String depositInput = JOptionPane.showInputDialog(frame, 
             "Your balance is $0. Enter deposit amount:", 
             "Initial Deposit", 
@@ -286,14 +297,17 @@ public class BlackjackGUI
         }
     }
     
+    // starts new game
     private boolean startNewGame() {
         houseCardPanel.removeAll();
         cardPanel.removeAll();
         resultLabel.setText("");
-
+        
+        // creates deck
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
-
+        
+        // asks for users bet
         while (true) {
             String betInput = JOptionPane.showInputDialog(frame, 
                 "Balance: $" + bank.getBalance() + "\nEnter your bet:", 
@@ -304,7 +318,8 @@ public class BlackjackGUI
                 System.exit(0);
                 return false;
             }
-
+            
+            // check that the bet is valid
             try {
                 currentBet = Integer.parseInt(betInput);
                 if (currentBet <= 0) {
@@ -320,7 +335,8 @@ public class BlackjackGUI
                 JOptionPane.showMessageDialog(frame, "Please enter a valid number!");
             }
         }
-
+        
+        // dealing inital cards
         game.hit("player");
         game.hit("house");
         game.hit("player");
@@ -425,6 +441,69 @@ public class BlackjackGUI
                 frame.dispose();
             }
         }
+    }
+    
+    // shows the user's win and loss stats
+    private void showStats() {
+        JDialog statsDialog = new JDialog(frame, "Game Statistics", true);
+        statsDialog.setSize(400, 300);
+        statsDialog.setLayout(new BorderLayout());
+        statsDialog.setLocationRelativeTo(frame);
+
+        JPanel statsPanel = new JPanel(new GridLayout(5, 1, 10, 10));
+        statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        statsPanel.setBackground(new Color(0, 100, 0));
+
+        // get current stats
+        int wins = gameStats.getWins();
+        int losses = gameStats.getLosses();
+        int draws = gameStats.getDraws();
+        int totalGames = wins + losses + draws;
+        
+        // calculate win percentage
+        double winPercentage = totalGames > 0 ? (double) wins / totalGames * 100 : 0;
+
+        JLabel titleLabel = new JLabel("Game Statistics", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setForeground(Color.WHITE);
+
+        JLabel winsLabel = new JLabel("Wins: " + wins, SwingConstants.CENTER);
+        winsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        winsLabel.setForeground(Color.WHITE);
+
+        JLabel lossesLabel = new JLabel("Losses: " + losses, SwingConstants.CENTER);
+        lossesLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        lossesLabel.setForeground(Color.WHITE);
+
+        JLabel drawsLabel = new JLabel("Draws: " + draws, SwingConstants.CENTER);
+        drawsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        drawsLabel.setForeground(Color.WHITE);
+
+        JLabel percentageLabel = new JLabel(
+            String.format("Win Percentage: %.1f%%", winPercentage), 
+            SwingConstants.CENTER);
+        percentageLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        percentageLabel.setForeground(Color.YELLOW);
+
+        statsPanel.add(titleLabel);
+        statsPanel.add(winsLabel);
+        statsPanel.add(lossesLabel);
+        statsPanel.add(drawsLabel);
+        statsPanel.add(percentageLabel);
+
+        // close button
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> statsDialog.dispose());
+        styleButton(closeButton);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(closeButton);
+
+        statsDialog.add(statsPanel, BorderLayout.CENTER);
+        statsDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        statsDialog.setVisible(true);
     }
 
     public static void main(String[] args) 

@@ -21,7 +21,6 @@ public class HousePlayer extends Player
     public boolean shouldHit()
     {
         //standard dealer rules for blackjack
-        // Uses getter instead of direct field access
-        return getScore() <= 16;
+        return score <= 16;
     }
 }

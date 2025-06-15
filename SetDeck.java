@@ -28,24 +28,14 @@ public class SetDeck
             for (String rank : ranks) {
                 int cardValue;
 
-                if (rank.matches("[2-9]"))
-                {
+                if (rank.matches("[2-9]")) {
                     cardValue = Integer.parseInt(rank);
                 } 
-                else if (rank.equals("10") || rank.equals("J") || rank.equals("Q") || rank.equals("K")) 
-                {
+                else if (rank.equals("10") || rank.equals("J") || rank.equals("Q") || rank.equals("K")) {
                     cardValue = 10;
                 }
-                
-                // Ace is not always 1 it can be 11 if matched with a face card before hand
-                // a check is needed when drawing cards.
-                else if(rank.equals("A"))
-                {
+                else {
                     cardValue = 1;
-                }
-                else
-                {
-                    cardValue = 11;
                 }
 
                 String cardName = rank + " of " + suit;

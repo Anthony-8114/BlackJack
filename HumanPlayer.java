@@ -17,5 +17,4 @@ public class HumanPlayer extends Player {
         return false;
     }
     
-    // You can add more features for human players later (like betting strategies)
 }

@@ -9,18 +9,19 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
 import java.util.List;
+import java.util.Map;
 
-public class BlackjackGUI 
-{
+public class BlackjackGUI {
     private JFrame frame;
     private JPanel panel, cardPanel, houseCardPanel;
     private JButton hitButton, standButton, doubleButton, newGameButton, statsButton;
-    private JLabel playerScoreLabel, houseScoreLabel, resultLabel, balanceLabel;
+    private JLabel playerScoreLabel, houseScoreLabel, resultLabel, balanceLabel, usernameLabel;
     private GameLogic game;
     private GameStats gameStats;
     private Bank bank;
     private int currentBet;
     private ImageIcon cardBackImage;
+    private PlayerAccount playerAccount;
     
     static {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -34,44 +35,29 @@ public class BlackjackGUI
         }));
     }
 
-    public BlackjackGUI() 
-    {
-        
-        
-        // Load the main game / creates the deck / loads game stats tracker
-        HashMap<String, Integer> deck = SetDeck.createDeck();
-        game = new GameLogic(deck);
-        bank = new Bank();
-        gameStats = new GameStats();
+    public BlackjackGUI(PlayerAccount account) {
+        this.playerAccount = account;
+        this.bank = account.getBank();
+        this.gameStats = account.getGameStats();
 
-        
-
-        // Load the back image for the cards
-        try 
-        {
+        try {
             String backImagePath = "src/main/java/com/mycompany/blackjack/cards/back.png";
             File backImageFile = new File(backImagePath);
             Image backImage = ImageIO.read(backImageFile);
             backImage = backImage.getScaledInstance(80, 120, Image.SCALE_SMOOTH);
             cardBackImage = new ImageIcon(backImage);
-        } 
-        catch (Exception e)    
-        {
+        } catch (Exception e) {
             System.out.println("Error loading card back image: " + e.getMessage());
             cardBackImage = createDefaultCardImage();
         }
 
-        // Set up the main window
-        frame = new JFrame("Blackjack");
+        frame = new JFrame("Blackjack - " + account.getUsername());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 700);
 
-        // Main panel and green background
-        panel = new JPanel(new BorderLayout()) 
-        {
+        panel = new JPanel(new BorderLayout()) {
             @Override
-            protected void paintComponent(Graphics g) 
-            {
+            protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 g.setColor(new Color(0, 100, 0));
                 g.fillRect(0, 0, getWidth(), getHeight());
@@ -79,9 +65,14 @@ public class BlackjackGUI
         };
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Top panel (game info)
-        JPanel topPanel = new JPanel(new GridLayout(1, 3));
+        JPanel topPanel = new JPanel(new GridLayout(1, 4));
         topPanel.setOpaque(false);
+        
+        usernameLabel = new JLabel(account.getUsername());
+        usernameLabel.setForeground(Color.WHITE);
+        usernameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        usernameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
         balanceLabel = new JLabel("Balance: $" + bank.getBalance());
         balanceLabel.setForeground(Color.WHITE);
         balanceLabel.setFont(new Font("Arial", Font.BOLD, 16));
@@ -97,11 +88,11 @@ public class BlackjackGUI
         houseScoreLabel.setFont(new Font("Arial", Font.BOLD, 16));
         houseScoreLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
+        topPanel.add(usernameLabel);
         topPanel.add(houseScoreLabel);
         topPanel.add(balanceLabel);
         topPanel.add(playerScoreLabel);
 
-        // House card panel
         houseCardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 5));
         houseCardPanel.setOpaque(false);
         houseCardPanel.setBorder(BorderFactory.createTitledBorder(
@@ -109,7 +100,6 @@ public class BlackjackGUI
         ((javax.swing.border.TitledBorder)houseCardPanel.getBorder()).setTitleColor(Color.WHITE);
         houseCardPanel.setPreferredSize(new Dimension(800, 180));
 
-        // Player card panel
         cardPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, -20, 5));
         cardPanel.setOpaque(false);
         cardPanel.setBorder(BorderFactory.createTitledBorder(
@@ -117,20 +107,17 @@ public class BlackjackGUI
         ((javax.swing.border.TitledBorder)cardPanel.getBorder()).setTitleColor(Color.WHITE);
         cardPanel.setPreferredSize(new Dimension(800, 180));
 
-        // Result label with improved styling
         resultLabel = new JLabel("");
         resultLabel.setForeground(Color.YELLOW);
         resultLabel.setFont(new Font("Arial", Font.BOLD, 36));
         resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
         resultLabel.setVerticalAlignment(SwingConstants.CENTER);
 
-        // Create a centered panel for the result
         JPanel resultPanel = new JPanel(new GridBagLayout());
         resultPanel.setOpaque(false);
         resultPanel.add(resultLabel);
         resultPanel.setBounds(200, 200, 400, 100);
 
-        // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         hitButton = new JButton("Hit");
@@ -139,7 +126,6 @@ public class BlackjackGUI
         newGameButton = new JButton("New Game");
         statsButton = new JButton("Stats");
 
-        // Style buttons
         styleButton(hitButton);
         styleButton(standButton);
         styleButton(doubleButton);
@@ -152,7 +138,6 @@ public class BlackjackGUI
         buttonPanel.add(newGameButton);
         buttonPanel.add(statsButton);
 
-        // Main layered pane layout
         JLayeredPane layeredPane = new JLayeredPane();
         layeredPane.setPreferredSize(new Dimension(800, 400));
         
@@ -164,7 +149,6 @@ public class BlackjackGUI
         layeredPane.add(housePanelWrapper, JLayeredPane.DEFAULT_LAYER);
         layeredPane.add(resultPanel, JLayeredPane.PALETTE_LAYER);
 
-        // Main layout
         panel.add(topPanel, BorderLayout.NORTH);
         panel.add(layeredPane, BorderLayout.CENTER);
         
@@ -180,8 +164,7 @@ public class BlackjackGUI
         frame.setVisible(true);
     }
 
-    private void styleButton(JButton button) 
-    {
+    private void styleButton(JButton button) {
         button.setBackground(new Color(0, 70, 0));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
@@ -190,8 +173,7 @@ public class BlackjackGUI
         button.setPreferredSize(new Dimension(120, 40));
     }
     
-    private ImageIcon createDefaultCardImage()
-    {
+    private ImageIcon createDefaultCardImage() {
         BufferedImage image = new BufferedImage(80, 120, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = (Graphics2D) image.getGraphics();
         g.setColor(Color.WHITE);
@@ -203,11 +185,8 @@ public class BlackjackGUI
         return new ImageIcon(image);
     }
     
-    // grabs the image from the cards folder
-    private ImageIcon getCardImage(String cardName)
-    {
-        try 
-        {
+    private ImageIcon getCardImage(String cardName) {
+        try {
             String[] parts = cardName.split(" ");
             String rank = parts[0].toLowerCase();
             String suit = parts[2].toLowerCase();
@@ -219,42 +198,32 @@ public class BlackjackGUI
             Image image = ImageIO.read(new File(imagePath));
             return new ImageIcon(image.getScaledInstance(80, 120, Image.SCALE_SMOOTH));
         }
-        catch (Exception e)
-        {
+        catch (Exception e) {
             System.out.println("Error loading " + cardName + ": " + e.getMessage());
             return createDefaultCardImage();
         }
     }
     
-    // sets up the button listeners 
-    // too know when a button is clicked
-    private void setupButtonListeners() 
-    {   
+    private void setupButtonListeners() {   
         statsButton.addActionListener(e -> showStats());
         
-        hitButton.addActionListener(e -> 
-        {
+        hitButton.addActionListener(e -> {
             game.hit("player");
             updateGameState();
-            if (game.getPlayerScore() >= 21) 
-            {
+            if (game.getPlayerScore() >= 21) {
                 endPlayerTurn();
             }
         });
 
         standButton.addActionListener(e -> endPlayerTurn());
 
-        doubleButton.addActionListener(e -> 
-        {
-            if (bank.getBalance() >= currentBet) 
-            {
+        doubleButton.addActionListener(e -> {
+            if (bank.getBalance() >= currentBet) {
                 currentBet *= 2;
                 game.hit("player");
                 updateGameState();
                 endPlayerTurn();
-            } 
-            else 
-            {
+            } else {
                 JOptionPane.showMessageDialog(frame, "Not enough balance to double!");
             }
         });
@@ -275,10 +244,7 @@ public class BlackjackGUI
         }
     }
     
-    // runs when user's balance is 0
     private void handleInitialDeposit() {
-        
-        // asks user for a deposit and credits it to the game
         String depositInput = JOptionPane.showInputDialog(frame, 
             "Your balance is $0. Enter deposit amount:", 
             "Initial Deposit", 
@@ -297,17 +263,14 @@ public class BlackjackGUI
         }
     }
     
-    // starts new game
     private boolean startNewGame() {
         houseCardPanel.removeAll();
         cardPanel.removeAll();
         resultLabel.setText("");
         
-        // creates deck
         HashMap<String, Integer> deck = SetDeck.createDeck();
         game = new GameLogic(deck);
         
-        // asks for users bet
         while (true) {
             String betInput = JOptionPane.showInputDialog(frame, 
                 "Balance: $" + bank.getBalance() + "\nEnter your bet:", 
@@ -319,7 +282,6 @@ public class BlackjackGUI
                 return false;
             }
             
-            // check that the bet is valid
             try {
                 currentBet = Integer.parseInt(betInput);
                 if (currentBet <= 0) {
@@ -336,7 +298,8 @@ public class BlackjackGUI
             }
         }
         
-        // dealing inital cards
+        bank.recordWager(currentBet);
+        
         game.hit("player");
         game.hit("house");
         game.hit("player");
@@ -346,38 +309,28 @@ public class BlackjackGUI
         return true;
     }
 
-    private void updateGameState() 
-    {
-        // Update house cards
+    private void updateGameState() {
         houseCardPanel.removeAll();
         List<String> houseHand = game.getHouseHand();
-        if (!houseHand.isEmpty()) 
-        {
-            houseCardPanel.add(new JLabel(getCardImage(houseHand.get(0))) 
-            {
+        if (!houseHand.isEmpty()) {
+            houseCardPanel.add(new JLabel(getCardImage(houseHand.get(0))) {
                 @Override public Dimension getPreferredSize() { return new Dimension(80, 120); }
             });
             
-            for (int i = 1; i < houseHand.size(); i++)
-            {
-                houseCardPanel.add(new JLabel(cardBackImage) 
-                {
+            for (int i = 1; i < houseHand.size(); i++) {
+                houseCardPanel.add(new JLabel(cardBackImage) {
                     @Override public Dimension getPreferredSize() { return new Dimension(80, 120); }
                 });
             }
         }
         
-        // Update player cards
         cardPanel.removeAll();
-        for (String card : game.getPlayerHand()) 
-        {
-            cardPanel.add(new JLabel(getCardImage(card)) 
-            {
+        for (String card : game.getPlayerHand()) {
+            cardPanel.add(new JLabel(getCardImage(card)) {
                 @Override public Dimension getPreferredSize() { return new Dimension(80, 120); }
             });
         }
         
-        // Update scores
         playerScoreLabel.setText("Your score: " + game.getPlayerScore());
         houseScoreLabel.setText("House score: " + (houseHand.size() > 1 ? "?" : String.valueOf(game.getHouseScore())));
         
@@ -405,14 +358,15 @@ public class BlackjackGUI
         if (result == null) {
             resultLabel.setText("It's a draw!");
             gameStats.recordDraw();
-            
         } else if (result) {
             resultLabel.setText("You win!");
             bank.increaseBalance(currentBet);
+            bank.recordWin(currentBet);
             gameStats.recordWin();
         } else {
             resultLabel.setText("You lose!");
             bank.deductBalance(currentBet);
+            bank.recordLoss(currentBet);
             gameStats.recordLoss();
         }
 
@@ -443,58 +397,77 @@ public class BlackjackGUI
         }
     }
     
-    // shows the user's win and loss stats
     private void showStats() {
-        JDialog statsDialog = new JDialog(frame, "Game Statistics", true);
-        statsDialog.setSize(400, 300);
+        JDialog statsDialog = new JDialog(frame, "Game Statistics - " + playerAccount.getUsername(), true);
+        statsDialog.setSize(400, 500);
         statsDialog.setLayout(new BorderLayout());
         statsDialog.setLocationRelativeTo(frame);
 
-        JPanel statsPanel = new JPanel(new GridLayout(5, 1, 10, 10));
+        JPanel statsPanel = new JPanel();
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
         statsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         statsPanel.setBackground(new Color(0, 100, 0));
 
-        // get current stats
         int wins = gameStats.getWins();
         int losses = gameStats.getLosses();
         int draws = gameStats.getDraws();
         int totalGames = wins + losses + draws;
-        
-        // calculate win percentage
         double winPercentage = totalGames > 0 ? (double) wins / totalGames * 100 : 0;
+        
+        Map<String, Integer> financialStats = bank.getFinancialStats();
+        int wagered = financialStats.get("wagered");
+        int won = financialStats.get("won");
+        int lost = financialStats.get("lost");
+        int net = financialStats.get("net");
 
         JLabel titleLabel = new JLabel("Game Statistics", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         titleLabel.setForeground(Color.WHITE);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statsPanel.add(titleLabel);
+        
+        statsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        JLabel winsLabel = new JLabel("Wins: " + wins, SwingConstants.CENTER);
-        winsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        winsLabel.setForeground(Color.WHITE);
-
-        JLabel lossesLabel = new JLabel("Losses: " + losses, SwingConstants.CENTER);
-        lossesLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        lossesLabel.setForeground(Color.WHITE);
-
-        JLabel drawsLabel = new JLabel("Draws: " + draws, SwingConstants.CENTER);
-        drawsLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        drawsLabel.setForeground(Color.WHITE);
-
+        JLabel gameStatsLabel = new JLabel("Game Results:", SwingConstants.CENTER);
+        gameStatsLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        gameStatsLabel.setForeground(Color.WHITE);
+        gameStatsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statsPanel.add(gameStatsLabel);
+        
+        statsPanel.add(createStatLabel("Wins: " + wins));
+        statsPanel.add(createStatLabel("Losses: " + losses));
+        statsPanel.add(createStatLabel("Draws: " + draws));
+        
         JLabel percentageLabel = new JLabel(
             String.format("Win Percentage: %.1f%%", winPercentage), 
             SwingConstants.CENTER);
         percentageLabel.setFont(new Font("Arial", Font.BOLD, 16));
         percentageLabel.setForeground(Color.YELLOW);
-
-        statsPanel.add(titleLabel);
-        statsPanel.add(winsLabel);
-        statsPanel.add(lossesLabel);
-        statsPanel.add(drawsLabel);
+        percentageLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         statsPanel.add(percentageLabel);
+        
+        statsPanel.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // close button
+        JLabel financialStatsLabel = new JLabel("Financial Stats:", SwingConstants.CENTER);
+        financialStatsLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        financialStatsLabel.setForeground(Color.WHITE);
+        financialStatsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statsPanel.add(financialStatsLabel);
+        
+        statsPanel.add(createStatLabel("Total Wagered: $" + wagered));
+        statsPanel.add(createStatLabel("Total Won: $" + won));
+        statsPanel.add(createStatLabel("Total Lost: $" + lost));
+        
+        JLabel netLabel = new JLabel("Net Profit: $" + net, SwingConstants.CENTER);
+        netLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        netLabel.setForeground(net >= 0 ? Color.GREEN : Color.RED);
+        netLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        statsPanel.add(netLabel);
+
         JButton closeButton = new JButton("Close");
         closeButton.addActionListener(e -> statsDialog.dispose());
         styleButton(closeButton);
+        closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
@@ -506,8 +479,15 @@ public class BlackjackGUI
         statsDialog.setVisible(true);
     }
 
-    public static void main(String[] args) 
-    {
-        SwingUtilities.invokeLater(() -> new BlackjackGUI());
+    private JLabel createStatLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setFont(new Font("Arial", Font.PLAIN, 16));
+        label.setForeground(Color.WHITE);
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+        return label;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new LoginGUI());
     }
 }

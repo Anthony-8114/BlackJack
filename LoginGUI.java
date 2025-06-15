@@ -4,12 +4,15 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
+
+// login screen
 public class LoginGUI {
     private JFrame frame;
     private JTextField usernameField;
     private JPasswordField passwordField;
 
     public LoginGUI() {
+        // login window
         frame = new JFrame("Blackjack - Login");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(350, 200);
@@ -27,7 +30,8 @@ public class LoginGUI {
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         panel.add(titleLabel, gbc);
-
+        
+        // username field
         JLabel usernameLabel = new JLabel("Username:");
         usernameLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         gbc.gridx = 0;
@@ -39,7 +43,8 @@ public class LoginGUI {
         gbc.gridx = 1;
         gbc.gridy = 1;
         panel.add(usernameField, gbc);
-
+        
+        // password field
         JLabel passwordLabel = new JLabel("Password:");
         passwordLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         gbc.gridx = 0;
@@ -53,7 +58,8 @@ public class LoginGUI {
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         buttonPanel.setOpaque(false);
-
+        
+        // log in button
         JButton loginButton = createSmallButton("Login");
         loginButton.addActionListener(this::handleLogin);
         buttonPanel.add(loginButton);
@@ -71,7 +77,8 @@ public class LoginGUI {
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
-
+    
+    // creates styled buttons
     private JButton createSmallButton(String text) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.PLAIN, 12));
@@ -79,16 +86,19 @@ public class LoginGUI {
         button.setMargin(new Insets(2, 5, 2, 5));
         return button;
     }
-
+    
+    // handles login attempt
     private void handleLogin(ActionEvent e) {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
-
+        
+        // checks if one or both fileds are empty
         if (username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(frame, "Please enter both username and password");
             return;
         }
-
+        
+        // checks if account is valid
         PlayerAccount account = new PlayerAccount(username, password);
         if (account.login()) {
             frame.dispose();
@@ -97,7 +107,7 @@ public class LoginGUI {
             JOptionPane.showMessageDialog(frame, "Invalid username or password");
         }
     }
-
+    // Handles registration attempt
     private void handleRegister(ActionEvent e) {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());

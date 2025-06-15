@@ -6,27 +6,22 @@ public class GameStats {
     private int wins;
     private int losses;
     private int draws;
+    private static Connection sharedConnection;
 
     private static final String DB_PATH = "derby-dbs/BlackjackDB";
     private static final String JDBC_URL = "jdbc:derby:" + DB_PATH + ";create=true";
 
     public GameStats() {
         initializeDatabase();
-        Runtime.getRuntime().addShutdownHook(new Thread(this::shutdownDerby));
     }
 
     private void initializeDatabase() {
         try {
             Class.forName("org.apache.derby.jdbc.EmbeddedDriver");
-
-            try (Connection conn = DriverManager.getConnection(JDBC_URL)) {
-                createTableIfNotExists(conn);
-                loadStats(conn);
-            }
-        } catch (ClassNotFoundException e) {
-            System.err.println("ERROR: Derby driver not found. Add Derby to your dependencies.");
-            e.printStackTrace();
-        } catch (SQLException e) {
+            sharedConnection = DriverManager.getConnection(JDBC_URL);
+            createTableIfNotExists(sharedConnection);
+            loadStats(sharedConnection);
+        } catch (ClassNotFoundException | SQLException e) {
             System.err.println("ERROR: Database initialization failed.");
             e.printStackTrace();
         }
@@ -36,11 +31,11 @@ public class GameStats {
         DatabaseMetaData dbMeta = conn.getMetaData();
         try (ResultSet tables = dbMeta.getTables(null, null, "GAME_STATS", null)) {
             if (!tables.next()) {
-                String createTableSQL = "CREATE TABLE GAME_STATS ("
-                        + "ID INT PRIMARY KEY, "
-                        + "WINS INT DEFAULT 0, "
-                        + "LOSSES INT DEFAULT 0, "
-                        + "DRAWS INT DEFAULT 0)";
+                String createTableSQL = "CREATE TABLE GAME_STATS (" +
+                        "ID INT PRIMARY KEY, " +
+                        "WINS INT DEFAULT 0, " +
+                        "LOSSES INT DEFAULT 0, " +
+                        "DRAWS INT DEFAULT 0)";
                 try (Statement stmt = conn.createStatement()) {
                     stmt.execute(createTableSQL);
                     System.out.println("GAME_STATS table created successfully.");
@@ -53,7 +48,6 @@ public class GameStats {
         String selectSQL = "SELECT WINS, LOSSES, DRAWS FROM GAME_STATS WHERE ID=1";
         try (PreparedStatement pstmt = conn.prepareStatement(selectSQL);
              ResultSet rs = pstmt.executeQuery()) {
-            
             if (rs.next()) {
                 wins = rs.getInt("WINS");
                 losses = rs.getInt("LOSSES");
@@ -92,18 +86,6 @@ public class GameStats {
         }
     }
 
-    private void shutdownDerby() {
-        try {
-            DriverManager.getConnection("jdbc:derby:;shutdown=true");
-        } catch (SQLException e) {
-            if (!e.getSQLState().equals("XJ015")) {
-                System.err.println("ERROR: Derby shutdown failed");
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Stats recording methods
     public void recordWin() {
         wins++;
         saveStats();
